@@ -17,6 +17,7 @@ Token usage (input/output), cache hit/miss and cost statistics for DeepSeek Harn
 <p align="center">
   <img src="docs/screenshots/cost-detail.png" alt="Cost detail modal" width="80%">
 </p>
+
 - **Overall summary** (Settings > Plugin configuration > Web UI plugins > Token Cost): time-filtered totals with today / yesterday / last 7 days / last 30 days / this month / last month / custom (up to 30 days), grouped by model, session and day.
 - **Pricing status**: which scheme is billing now and when the next scheme kicks in.
 

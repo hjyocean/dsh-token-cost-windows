@@ -21,6 +21,7 @@ DeepSeek Harness（DSH）Web GUI 的 Token 用量 / 缓存命中 / 费用统计�
 <p align="center">
   <img src="docs/screenshots/cost-detail.png" alt="费用明细弹窗" width="80%">
 </p>
+
 - **整体汇总**（设置 > 插件配置 > Web UI 插件 > Token 费用统计）：时间筛选（今天 / 昨天 / 最近 7 天 / 最近 30 天 / 本月 / 上月 / 自定义，最多 30 天）+ 费用 / 输入 / 输出 / 缓存命中率统计卡，按模型、会话、日期分组。
 - **计价状态**：当前生效方案、下次切换时间、高峰时段一目了然。
 
