@@ -1,58 +1,64 @@
-# @deepseek-ai/dsh-token-cost
+# dsh-token-cost
 
-Token usage (input/output), cache hit/miss and cost statistics for DeepSeek Harness (DSH) Web GUI, per conversation and in aggregate — with a pricing engine that switches billing schemes automatically when DeepSeek changes prices.
+<p align="center">
+  <img src="docs/banner.png" alt="dsh-token-cost" width="100%">
+</p>
 
-## What it gives you
+<p align="center">
+  <a href="README.en.md">English</a> · <strong>中文</strong>
+</p>
 
-- **Per-conversation view**: a cost chip in the composer dock (next to the shipped `Input ~7.9K tok · Output ~12 tok` line) shows the current session's cost and cache hit rate; clicking it opens the per-request detail modal.
-- **Overall summary** (Settings > Plugin configuration > Web UI plugins > Token Cost): time-filtered totals with today / yesterday / last 7 days / last 30 days / this month / last month / custom (up to 30 days), grouped by model, session and day.
-- **Pricing status**: which scheme is billing now and when the next scheme kicks in.
+DeepSeek Harness（DSH）Web GUI 的 Token 用量 / 缓存命中 / 费用统计插件：支持单对话视图与整体汇总，内置双计价方案并在 DeepSeek 调价后按记录时间自动切换。
 
-## Data source
+## 功能
 
-The plugin reads DSH's durable session logs (`$DSH_HOME/sessions/<cwd>/<session-id>/session.jsonl.zstd`) and folds the provider-reported usage events into per-request billing records (last-wins per turn/step, mirroring the harness token-meter projection). A compact ledger (`$DSH_HOME/storages/dsh-token-cost/ledger.json`) caches parsed records; only changed logs are re-parsed, so queries stay cheap while a session streams. zstd decoding uses [fzstd](https://github.com/101arrowz/fzstd) (pure JS, zero deps).
+- **单对话视图**：输入框底部状态行（`Input ~7.9K tok · Output ~12 tok` 旁）新增费用芯片，实时显示本会话费用与缓存命中率；点击打开按请求（step）的明细弹窗。
+- **整体汇总**（设置 > 插件配置 > Web UI 插件 > Token 费用统计）：时间筛选（今天 / 昨天 / 最近 7 天 / 最近 30 天 / 本月 / 上月 / 自定义，最多 30 天）+ 费用 / 输入 / 输出 / 缓存命中率统计卡，按模型、会话、日期分组。
+- **计价状态**：当前生效方案、下次切换时间、高峰时段一目了然。
 
-Token fields follow the harness convention: `inputTokens` = cache-miss prompt tokens, `cacheReadTokens` = cache-hit prompt tokens (disjoint; together they are the billed input).
+## 数据来源
 
-## Pricing engine (dual schemes, auto switch)
+插件读取 DSH 的持久会话日志（`$DSH_HOME/sessions/<cwd>/<session-id>/session.jsonl.zstd`），把 provider 上报的 usage 事件折叠为按请求的计费记录（同一 turn/step 取最后一次，与官方 token-meter 投影语义一致）。紧凑账本（`$DSH_HOME/storages/dsh-token-cost/ledger.json`）缓存解析结果，只重解析变化的日志；zstd 解压使用 fzstd（纯 JS 零依赖）。
 
-Built-in catalog from the official pricing page (api-docs.deepseek.com/quick_start/pricing, fetched 2026-08-14):
+Token 字段遵循 Harness 约定：`inputTokens` = 缓存未命中部分，`cacheReadTokens` = 缓存命中部分（两者不相交，相加即计费输入）。
 
-- **Scheme A** (flat, until 2026-08-16T16:00Z): deepseek-v4-flash / v4-pro flat prices in CNY and USD; legacy deepseek-chat / deepseek-reasoner at their flat rates.
-- **Scheme B** (peak/off-peak, from 2026-08-16T16:00Z = 2026-08-17 00:00 Beijing time): peak hours UTC 01–04 and 06–10 (Beijing 9–12, 14–18), off-peak at half price. Covers deepseek-v4-flash / v4-pro; legacy models stay flat.
+## 价格引擎（双方案 + 自动切换）
 
-Billing picks, per record, the newest scheme whose `effectiveFrom` is not after the record time. **When DeepSeek changes prices again, adding one scheme entry is the whole adaptation — no plugin update needed.** You can also force a scheme (`priceMode`), override or add model prices (`customPrices` JSON), and switch the display currency (CNY/USD).
+内置官方价格表（api-docs.deepseek.com/quick_start/pricing，2026-08-14 抓取）：
 
-Cost = miss/1e6 × miss price + hit/1e6 × hit price + output/1e6 × output price (per-1M-token rates).
+- **方案 A**（平价，2026-08-16T16:00Z 前）：deepseek-v4-flash / v4-pro 平价（CNY/USD），deepseek-chat / deepseek-reasoner 旧平价。
+- **方案 B**（峰谷定价，2026-08-16T16:00Z = 北京时间 2026-08-17 00:00 起）：高峰时段北京时间 9–12、14–18（UTC 1–4、6–10），闲时半价；v4 两模型适用，旧模型维持平价。
 
-> Note: figures are an estimate from provider-reported usage; always reconcile against the official billing page. Day bucketing follows your browser timezone, so a conversation crossing midnight splits on your local days. Requests made with the same API key OUTSIDE DSH (other tools/processes) never enter DSH session logs and are not counted.
+每条记录按时间取「生效时间最晚且不晚于记录时间」的方案计费。**将来 DeepSeek 再次调价，只需追加一条新方案，无需更新插件。** 也支持强制方案（`priceMode`）、自定义模型价格（`customPrices` JSON）与显示币种切换（CNY/USD）。
 
-## Installation
+费用 = 未命中/1e6 × 未命中单价 + 命中/1e6 × 命中单价 + 输出/1e6 × 输出单价（每百万 tokens 单价）。
 
-Install the family aggregate package (all plugins in one) or this plugin alone:
+> 说明：金额为基于 provider 上报用量的估算，请以官方账单为准。按日期分组跟随浏览器时区，跨零点对话按本地日期切分；使用同一把 API Key 但在 DSH 之外发起的请求（其他工具/进程）不产生会话日志，不在统计范围内。
+
+## 安装
 
 ```sh
-# standalone
+# 单独安装
 dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
-# or via the aggregate
+# 或通过全家桶聚合包
 （或安装后通过 dsh-web-ui-all 聚合包使用）
 ```
 
-Restart `dsh web`, open the settings page and expand "Web UI plugins". The plugin reads usage starting from the first query — existing session logs are backfilled automatically.
+重启 `dsh web` 后，在设置页展开「Web UI 插件」即可看到。历史会话日志在首次查询时自动回填。
 
-## Configuration
+## 配置项
 
-| Key | Type | Default | Meaning |
+| 键 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `enabled` | boolean | `true` | Master switch (dock chip + summary card) |
-| `currency` | 'cny' | 'usd' | `'cny'` | Display currency |
-| `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | Auto switches by record time |
-| `customPrices` | string (JSON) | `''` | Per-model price overrides |
-| `keyAliases` | string (JSON) | `''` | Provider > API key alias map |
+| `enabled` | boolean | `true` | 总开关（费用芯片 + 汇总卡片） |
+| `currency` | 'cny' | 'usd' | `'cny'` | 显示币种 |
+| `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | 自动按记录时间切换 |
+| `customPrices` | string (JSON) | `''` | 按模型覆盖价格 |
+| `keyAliases` | string (JSON) | `''` | provider > API Key 别名 |
 
-All editable from the card's Settings tab; a "Rescan session logs" action forces a full re-parse.
+以上均可在卡片的「配置」页编辑；「重新扫描会话日志」按钮强制全量重解析。
 
-## Development
+## 开发
 
 ```sh
 pnpm install && pnpm -r build
@@ -60,4 +66,8 @@ pnpm --filter @deepseek-ai/dsh-token-cost test
 pnpm --filter @deepseek-ai/dsh-token-cost typecheck
 ```
 
-See DESIGN.md for the architecture.
+架构说明见 DESIGN.md。
+
+---
+
+*[English version](README.en.md)*
