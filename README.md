@@ -33,9 +33,9 @@ Install the family aggregate package (all plugins in one) or this plugin alone:
 
 ```sh
 # standalone
-dsh plugin --profile web add link:/path/to/dsh-web-ui/packages/dsh-token-cost
+dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
 # or via the aggregate
-dsh plugin --profile web add link:/path/to/dsh-web-ui/packages/dsh-web-ui-all
+（或安装后通过 dsh-web-ui-all 聚合包使用）
 ```
 
 Restart `dsh web`, open the settings page and expand "Web UI plugins". The plugin reads usage starting from the first query — existing session logs are backfilled automatically.

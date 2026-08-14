@@ -31,9 +31,9 @@ Token 字段遵循 Harness 约定：`inputTokens` = 缓存未命中部分，`cac
 
 ```sh
 # 单独安装
-dsh plugin --profile web add link:/path/to/dsh-web-ui/packages/dsh-token-cost
+dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
 # 或通过全家桶聚合包
-dsh plugin --profile web add link:/path/to/dsh-web-ui/packages/dsh-web-ui-all
+（或安装后通过 dsh-web-ui-all 聚合包使用）
 ```
 
 重启 `dsh web` 后，在设置页展开「Web UI 插件」即可看到。历史会话日志在首次查询时自动回填。
