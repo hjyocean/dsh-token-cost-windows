@@ -8,7 +8,15 @@ Token usage (input/output), cache hit/miss and cost statistics for DeepSeek Harn
 
 ## What it gives you
 
-- **Per-conversation view**: a cost chip in the composer dock (next to the shipped `Input ~7.9K tok · Output ~12 tok` line) shows the current session's cost and cache hit rate; clicking it opens the per-request detail modal.
+- **Per-conversation view**: the session's total cost is embedded directly into the official stats line at the bottom of the conversation (right after `TTFT avg … · … tok/s`); clicking it opens the per-request detail modal (time / model / cache miss / cache hit / output / cost, newest first).
+
+<p align="center">
+  <img src="docs/screenshots/conversation-bottom.png" alt="Cost in the conversation stats line" width="90%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/cost-detail.png" alt="Cost detail modal" width="80%">
+</p>
 - **Overall summary** (Settings > Plugin configuration > Web UI plugins > Token Cost): time-filtered totals with today / yesterday / last 7 days / last 30 days / this month / last month / custom (up to 30 days), grouped by model, session and day.
 - **Pricing status**: which scheme is billing now and when the next scheme kicks in.
 
@@ -48,7 +56,7 @@ Restart `dsh web`, open the settings page and expand "Web UI plugins". The plugi
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `enabled` | boolean | `true` | Master switch (dock chip + summary card) |
+| `enabled` | boolean | `true` | Master switch (stats-line cost + summary card) |
 | `currency` | 'cny' | 'usd' | `'cny'` | Display currency |
 | `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | Auto switches by record time |
 | `customPrices` | string (JSON) | `''` | Per-model price overrides |

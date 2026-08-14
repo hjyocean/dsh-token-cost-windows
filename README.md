@@ -12,7 +12,15 @@ DeepSeek Harness（DSH）Web GUI 的 Token 用量 / 缓存命中 / 费用统计�
 
 ## 功能
 
-- **单对话视图**：输入框底部状态行（`Input ~7.9K tok · Output ~12 tok` 旁）新增费用芯片，实时显示本会话费用与缓存命中率；点击打开按请求（step）的明细弹窗。
+- **单对话视图**：对话页面底部官方状态行（「首 token 平均 … · … tok/s」之后）直接嵌入本会话消耗费用，点击即可打开按请求的明细弹窗（时间 / 模型 / 缓存未命中 / 缓存命中 / 输出 / 费用，最新在上）。
+
+<p align="center">
+  <img src="docs/screenshots/conversation-bottom.png" alt="对话底部状态行费用展示" width="90%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/cost-detail.png" alt="费用明细弹窗" width="80%">
+</p>
 - **整体汇总**（设置 > 插件配置 > Web UI 插件 > Token 费用统计）：时间筛选（今天 / 昨天 / 最近 7 天 / 最近 30 天 / 本月 / 上月 / 自定义，最多 30 天）+ 费用 / 输入 / 输出 / 缓存命中率统计卡，按模型、会话、日期分组。
 - **计价状态**：当前生效方案、下次切换时间、高峰时段一目了然。
 
@@ -38,10 +46,7 @@ Token 字段遵循 Harness 约定：`inputTokens` = 缓存未命中部分，`cac
 ## 安装
 
 ```sh
-# 单独安装
 dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
-# 或通过全家桶聚合包
-（或安装后通过 dsh-web-ui-all 聚合包使用）
 ```
 
 重启 `dsh web` 后，在设置页展开「Web UI 插件」即可看到。历史会话日志在首次查询时自动回填。
@@ -50,11 +55,10 @@ dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
 
 | 键 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `enabled` | boolean | `true` | 总开关（费用芯片 + 汇总卡片） |
+| `enabled` | boolean | `true` | 总开关（状态行费用显示 + 汇总卡片） |
 | `currency` | 'cny' | 'usd' | `'cny'` | 显示币种 |
 | `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | 自动按记录时间切换 |
 | `customPrices` | string (JSON) | `''` | 按模型覆盖价格 |
-| `keyAliases` | string (JSON) | `''` | provider > API Key 别名 |
 
 以上均可在卡片的「配置」页编辑；「重新扫描会话日志」按钮强制全量重解析。
 
