@@ -230,6 +230,7 @@ function SummaryTab(props: TabProps) {
           <GroupTable t={t} title={t('group.byModel')} rows={summary.byModel} money={money} />
           <GroupTable t={t} title={t('group.bySession')} rows={sessionsSorted} money={money} />
           <GroupTable t={t} title={t('group.byDay')} rows={daysSorted} money={money} dateRows />
+          <span className={css.groupNote}>{t('scope.note')}</span>
         </>
       ) : null}
     </>
