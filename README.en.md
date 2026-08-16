@@ -18,6 +18,9 @@ Token usage (input/output), cache hit/miss and cost statistics for DeepSeek Harn
   <img src="docs/screenshots/cost-detail.png" alt="Cost detail modal" width="80%">
 </p>
 
+- **Account balance**: right next to the cost on the same stats line, the current provider's account balance (e.g. `Balance ¥41.82`), auto-refreshed every 5 minutes; click to refresh immediately. Providers without balance support show a status word instead.
+- **Conversation width**: force the conversation column to full window width (overrides DSH's built-in width variable, survives DSH upgrades), or fall back to the shell default.
+
 - **Overall summary** (Settings > Plugin configuration > Web UI plugins > Token Cost): time-filtered totals with today / yesterday / last 7 days / last 30 days / this month / last month / custom (up to 30 days), grouped by model, session and day.
 - **Pricing status**: which scheme is billing now and when the next scheme kicks in.
 
@@ -53,6 +56,32 @@ dsh plugin --profile web add github:le-soleil-se-couche/dsh-token-cost
 
 Restart `dsh web`, open the settings page and expand "Web UI plugins". The plugin reads usage starting from the first query — existing session logs are backfilled automatically.
 
+## Updating
+
+When developing locally (installed via `link:`), rebuild and the change applies by scope:
+
+```sh
+cd <plugin-dir>
+pnpm build        # regenerate lib/
+```
+
+- **UI changes** (balance, width, cards…): the built-in client-hmr hot-reloads the browser; hard-refresh if it does not.
+- **Host changes** (routes, settings): restart `dsh web`.
+- **package.json changed** (new/changed dependencies): `pnpm install`, then re-run `dsh plugin --profile web add <plugin-dir>`, then restart `dsh web`.
+- **Pulled new code from git**: `git pull` → `pnpm install` → `pnpm build` → re-run `dsh plugin --profile web add <plugin-dir>`.
+
+For packages installed from a registry (npm / github), follow DSH's plugin docs (`dsh plugin --profile web update <pkg>` or reinstall at a newer version).
+
+## Changes vs upstream
+
+This repository is forked from [le-soleil-se-couche/dsh-token-cost](https://github.com/le-soleil-se-couche/dsh-token-cost) at `9a7c183`. Changes on top of upstream:
+
+- **Account balance**: new `/api/dsh-token-cost/balance` route plus a balance chip in the conversation stats line (5-minute auto refresh, click to refresh). The key is resolved through the `credentials` service inside the host process and never leaves it.
+- **Conversation width**: new `chatWidth` setting that overrides DSH's built-in width variable (survives DSH upgrades).
+- **Windows path compatibility**: `ledger.ts` used `split('/')` / `lastIndexOf('/')`, which only understand forward slashes; now both `\` and `/` work — fixing all session ids collapsing to `session-unknown` and the ledger.json persist failure (`mkdir ''`) on Windows.
+- **DSH rc.6 slot rename**: the settings card slot changed from `web-ui.plugin.item` to `settings.plugin.item` (the old name registers silently without effect on rc.6, so the card never showed).
+- **Tests**: ledger test adapted to Windows filesystem timestamp precision (CopyFile preserves the source mtime, which defeated the `(mtimeMs, size)` change detection).
+
 ## Configuration
 
 | Key | Type | Default | Meaning |
@@ -61,6 +90,7 @@ Restart `dsh web`, open the settings page and expand "Web UI plugins". The plugi
 | `currency` | 'cny' | 'usd' | `'cny'` | Display currency |
 | `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | Auto switches by record time |
 | `customPrices` | string (JSON) | `''` | Per-model price overrides |
+| `chatWidth` | 'wide' | 'default' | `'wide'` | Conversation width: `wide` forces full width (overrides DSH's built-in variable, survives upgrades), `default` follows the shell |
 | `keyAliases` | string (JSON) | `''` | Provider > API key alias map |
 
 All editable from the card's Settings tab; a "Rescan session logs" action forces a full re-parse.
