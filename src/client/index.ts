@@ -54,21 +54,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** dsh-token-cost surface copy. */
     'token-cost': TokenCostKey
   }
-
-  interface SlotMap {
-    /**
-     * The child slot the plugin configuration section declares; this card
-     * registers into it. Spelled here with the same shape so this package can
-     * register without depending on the sibling UI package.
-     */
-    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
-  }
-}
-
-/** Owner share of a plugin card (the section supplies nothing). */
-export interface SettingsPluginItemOwnerProps {
-  /** Marker field: card owner props are intentionally empty. */
-  children?: never
 }
 
 /** Required services (fiber inject waiting — the runtime must be up first). */
@@ -107,8 +92,8 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: (): StatsCostBridgeFace => ({ settings: scope }),
     }, StatsCostBridge)))
-    disposers.push(ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-      name: 'settings.plugin.item',
+    disposers.push(ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
+      name: 'settings.plugins.tab',
       id: 'token-cost',
       order: 130,
       locale: NS,
