@@ -19,7 +19,7 @@ Token usage (input/output), cache hit/miss and cost statistics for DeepSeek Harn
 </p>
 
 - **Account balance**: right next to the cost on the same stats line, the current provider's account balance (e.g. `Balance ¥41.82`), auto-refreshed every 5 minutes; click to refresh immediately. Providers without balance support show a status word instead.
-- **Conversation width**: force the conversation column to full window width (overrides DSH's built-in width variable, survives DSH upgrades), or fall back to the shell default.
+- **Conversation width**: force the conversation column to full window width, or back to the official 748px column; both widths are injected by the plugin, independent of the DSH bundle, and survive DSH upgrades.
 
 - **Overall summary** (Settings > Plugin configuration > Web UI plugins > Token Cost): time-filtered totals with today / yesterday / last 7 days / last 30 days / this month / last month / custom (up to 30 days), grouped by model, session and day.
 - **Pricing status**: which scheme is billing now and when the next scheme kicks in.
@@ -90,7 +90,7 @@ This repository is forked from [le-soleil-se-couche/dsh-token-cost](https://gith
 | `currency` | 'cny' | 'usd' | `'cny'` | Display currency |
 | `priceMode` | 'auto' | 'scheme-a' | 'scheme-b' | `'auto'` | Auto switches by record time |
 | `customPrices` | string (JSON) | `''` | Per-model price overrides |
-| `chatWidth` | 'wide' | 'default' | `'wide'` | Conversation width: `wide` forces full width (overrides DSH's built-in variable, survives upgrades), `default` follows the shell |
+| `chatWidth` | 'wide' | 'default' | `'wide'` | Conversation width: `wide` = full width, `default` = official 748px column (both injected by the plugin, independent of the DSH bundle) |
 | `keyAliases` | string (JSON) | `''` | Provider > API key alias map |
 
 All editable from the card's Settings tab; a "Rescan session logs" action forces a full re-parse.

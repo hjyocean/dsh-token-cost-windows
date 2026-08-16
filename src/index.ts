@@ -41,7 +41,7 @@ export interface Config {
   priceMode?: 'auto' | 'scheme-a' | 'scheme-b'
   /** Custom model prices as JSON text; empty string = none. */
   customPrices?: string
-  /** Conversation column width: 'wide' forces full width, 'default' keeps the shell's. */
+  /** Conversation column width: 'wide' forces full width, 'default' the official 748px column. */
   chatWidth?: 'wide' | 'default'
 }
 

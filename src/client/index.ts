@@ -30,23 +30,28 @@ const NS = 'token-cost'
 const CHAT_WIDTH_STYLE_ID = 'dsh-token-cost-chat-width'
 
 /**
- * Force the conversation column to full width. The shell defines
+ * Official rc.6 narrow-column default. The installed DSH bundle may have
+ * been patched to 100% by an earlier PowerShell patch, so "default" must
+ * inject the official value explicitly instead of trusting the bundle.
+ */
+const CHAT_WIDTH_DEFAULT = '748px'
+
+/**
+ * Apply the conversation column width. The shell defines
  * `--dsh-chat-content-width` on its conversation root; a universal
  * `!important` declaration overrides that variable wherever it is set, so
  * every consumer (message column, empty-state card, composer card) resolves
- * to 100% and the DSH upgrade cannot silently revert the width.
+ * to the chosen width and the DSH upgrade cannot silently revert it.
  */
 function applyChatWidthCss(width: 'wide' | 'default'): void {
-  const existing = document.getElementById(CHAT_WIDTH_STYLE_ID)
-  if (width !== 'wide') {
-    existing?.remove()
-    return
+  const value = width === 'wide' ? '100%' : CHAT_WIDTH_DEFAULT
+  let style = document.getElementById(CHAT_WIDTH_STYLE_ID)
+  if (style === null) {
+    style = document.createElement('style')
+    style.id = CHAT_WIDTH_STYLE_ID
+    document.head.appendChild(style)
   }
-  if (existing !== null) return
-  const style = document.createElement('style')
-  style.id = CHAT_WIDTH_STYLE_ID
-  style.textContent = '*{--dsh-chat-content-width:100%!important}'
-  document.head.appendChild(style)
+  style.textContent = `*{--dsh-chat-content-width:${value}!important}`
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
