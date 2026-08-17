@@ -81,6 +81,7 @@ pnpm build        # 重新生成 lib/
 - **对话区全宽**：新增 `chatWidth` 配置项，覆盖 DSH 内置宽度变量（升级不回退）
 - **Windows 路径兼容**：`ledger.ts` 中 `split('/')` 与 `lastIndexOf('/')` 只认正斜杠，已改为兼容 `\`——修复 Windows 下会话 id 全部变成 `session-unknown`、ledger.json 持久化失败（`mkdir ''`）两个问题
 - **DSH rc.6 槽名适配**：设置页卡片槽 `web-ui.plugin.item` → `settings.plugin.item`（上游槽名在 rc.6 不存在；rc.6 的「插件配置」区由 `settings.section`（导航）+ `settings.plugins.tab`（标签：插件列表 / 可配置）+ `settings.plugin.item`（可配置标签内的插件卡片）三级组成，卡片注册在 `settings.plugin.item`，显示于 设置 > 插件配置 > 可配置）
+- **DSH rc.6 设置暴露补丁（必须）**：DSH 的 `dsh-host-apiproxy` 用硬编码白名单 `WEB_SETTINGS_NAMESPACES` 决定哪些 settings namespace 暴露给配置客户端（插件自身无法声明，代码注释标注为 deferred work）。`token-cost` 不在白名单时，客户端**读不到也写不进**本插件设置（保存静默失败，重开恢复默认）。**需要在 `$DSH_HOME` 对应安装的 `@deepseek-ai/dsh-host-apiproxy/lib/index.js` 的 `WEB_SETTINGS_NAMESPACES` 数组中加入 `"token-cost"`**（本机路径：`%APPDATA%\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-host-apiproxy\lib\index.js`）。**DSH 升级会覆盖此文件，升级后需重新补丁。**
 - **测试**：ledger 测试适配 Windows 文件时间戳精度（CopyFile 保留源 mtime，`(mtimeMs, size)` 变更检测失效）
 
 ## 配置项
