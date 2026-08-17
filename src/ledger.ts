@@ -10,7 +10,7 @@
 
 import { decompress } from 'fzstd'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { SessionMeta, UsageRecord } from './protocol.ts'
 import { parseSessionLog } from './parser.ts'
 
@@ -69,7 +69,7 @@ async function readSessionText(file: string): Promise<string> {
 
 /** Session id derived from a log path: the session-* directory name. */
 export function sessionIdFromPath(file: string): string {
-  const parts = file.split('/')
+  const parts = file.split(/[\\/]/)
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     if (parts[i].startsWith('session-') && !parts[i].endsWith('.zstd')) return parts[i]
   }
@@ -181,7 +181,7 @@ export class SessionLedger {
     const payload: LedgerFile = { version: 1, sessions }
     try {
       const text = JSON.stringify(payload)
-      const dir = this.ledgerPath.slice(0, Math.max(this.ledgerPath.lastIndexOf('/'), 0))
+      const dir = dirname(this.ledgerPath)
       const { mkdirSync } = await import('node:fs')
       mkdirSync(dir, { recursive: true })
       const tmp = `${this.ledgerPath}.${process.pid}.tmp`

@@ -12,7 +12,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the locale namespace map and the slot registry merge.
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pulls the conversation slot declarations (composer.dock) and the
-// settings-surface SlotMap members (settingsScope, web-ui.plugin.item).
+// settings-surface SlotMap members (settingsScope, settings.plugin.item).
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { StatsCostBridge, type StatsCostBridgeFace } from './stats/StatsCostBridge.tsx'
@@ -34,12 +34,11 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
   interface SlotMap {
     /**
-     * The child slot the Web UI plugin group declares; this card registers
-     * into the group instead of the top-level `settings.plugin.item` list.
-     * Spelled here with the same shape so this package can register without
-     * depending on the sibling UI package.
+     * The child slot the plugin configuration section declares; this card
+     * registers into it. Spelled here with the same shape so this package can
+     * register without depending on the sibling UI package.
      */
-    'web-ui.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
+    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
   }
 }
 
@@ -71,8 +70,8 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: (): StatsCostBridgeFace => ({ settings: scope }),
     }, StatsCostBridge)))
-    disposers.push(ctx.slots.inject('web-ui.plugin.item', () => ctx.slots.register({
-      name: 'web-ui.plugin.item',
+    disposers.push(ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+      name: 'settings.plugin.item',
       id: 'token-cost',
       order: 130,
       locale: NS,

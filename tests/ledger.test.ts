@@ -5,7 +5,7 @@
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { copyFileSync } from 'node:fs'
+import { copyFileSync, utimesSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SessionLedger } from '../src/ledger.ts'
 
@@ -35,6 +35,9 @@ describe('SessionLedger', () => {
 
     // Changed file: re-parse picks the new usage up.
     copyFileSync(FIXTURE_B, file)
+    // Windows CopyFile preserves the source mtime, so force a fresh timestamp
+    // for the (mtimeMs, size) change diff to notice the replacement.
+    utimesSync(file, new Date(), new Date())
     await ledger.sync()
     expect(ledger.session('session-abc')!.records[0]!.inputTokens).toBe(200)
   })
