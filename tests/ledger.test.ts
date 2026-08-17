@@ -36,8 +36,9 @@ describe('SessionLedger', () => {
     // within the same filesystem timestamp tick on Windows (mtimeMs equal),
     // so bump the mtime to simulate a genuinely changed file.
     copyFileSync(FIXTURE_B, file)
-    const later = new Date(Date.now() + 1_000)
-    utimesSync(file, later, later)
+    // Windows CopyFile preserves the source mtime, so force a fresh timestamp
+    // for the (mtimeMs, size) change diff to notice the replacement.
+    utimesSync(file, new Date(), new Date())
     await ledger.sync()
     expect(ledger.session('session-abc')!.records[0]!.inputTokens).toBe(200)
   })
