@@ -19,6 +19,8 @@ export interface TokenCostSettings {
   priceMode?: 'auto' | 'scheme-a' | 'scheme-b'
   /** Custom model prices as JSON text; empty string = none. */
   customPrices?: string
+  /** Conversation column width: 'wide' forces full width, 'default' keeps the shell's. */
+  chatWidth?: 'wide' | 'default'
 }
 
 /** Resolved display facts with defaults applied. */
@@ -26,6 +28,7 @@ export interface ResolvedSettings {
   enabled: boolean
   currency: 'cny' | 'usd'
   priceMode: 'auto' | 'scheme-a' | 'scheme-b'
+  chatWidth: 'wide' | 'default'
 }
 
 /** Apply defaults to a raw section value. */
@@ -34,6 +37,7 @@ export function resolveSettings(value: TokenCostSettings | undefined): ResolvedS
     enabled: value?.enabled ?? true,
     currency: value?.currency ?? 'cny',
     priceMode: value?.priceMode ?? 'auto',
+    chatWidth: value?.chatWidth ?? 'wide',
   }
 }
 

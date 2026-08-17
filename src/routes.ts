@@ -7,10 +7,12 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { Context } from '@deepseek-ai/cordis'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import type { SessionLedger } from './ledger.ts'
 import { priceRecord, totalsFor } from './pricing.ts'
-import type { CostGroupRow, CostTotals, PriceScheme, UsageRecord } from './protocol.ts'
+import type { BalanceInfo, CostGroupRow, CostTotals, PriceScheme, UsageRecord } from './protocol.ts'
 import { TOKEN_COST_API } from './protocol.ts'
 
 /** Pricing facts resolved from plugin settings per request. */
@@ -112,22 +114,152 @@ export function dayLabelForTime(time: number, tzOffsetMinutes: number): string {
   return `${day.getUTCFullYear()}-${pad(day.getUTCMonth() + 1)}-${pad(day.getUTCDate())}`
 }
 
+/** Fence + method check, writing the error response on failure. */
+function guard(req: IncomingMessage, res: ServerResponse, method: string): boolean {
+  if (!isLoopbackRequest(req)) {
+    writeJson(res, 403, { error: 'forbidden: loopback-only' })
+    return false
+  }
+  if (req.method !== method) {
+    writeJson(res, 405, { error: `method not allowed: ${req.method}` })
+    return false
+  }
+  return true
+}
+
+/**
+ * Balance endpoint builder per provider id. A provider absent from this map
+ * reports `supported: false` instead of failing the surface.
+ */
+const BALANCE_ENDPOINTS: Readonly<Record<string, (baseURL?: string) => string>> = {
+  'deepseek-official': (baseURL) => `${baseURL ?? 'https://api.deepseek.com'}/user/balance`,
+}
+
+/** Narrowed view of the host services the balance route reads (all optional). */
+interface BalanceHostServices {
+  agentDefaultModel?: { currentSelection?: () => { provider?: string } }
+  llm?: {
+    listProviders?: () => Array<{ id: string }>
+    listConfigurableProviders?: () => Array<{ provider: string; settingsNs: string; settingsPath: string[] }>
+  }
+  settings?: {
+    describe?: (options: { redactSecrets: boolean }) => Array<{ ns: string; value: unknown }>
+  }
+  credentials?: { resolve: (ref: ReturnType<typeof credentialRef>) => Promise<{ value: string; source: string } | undefined> }
+}
+
+/**
+ * The provider currently selected as the default model route, falling back to
+ * the first registered adapter.
+ */
+function currentProvider(ctx: Context): string | undefined {
+  const services = ctx.get as (key: string) => unknown
+  try {
+    const selection = (services('agentDefaultModel') as BalanceHostServices['agentDefaultModel'])
+      ?.currentSelection?.()
+    if (selection?.provider !== undefined) return selection.provider
+  } catch {
+    /* service absent in minimal deployments — fall through */
+  }
+  return (services('llm') as BalanceHostServices['llm'])
+    ?.listProviders?.()[0]?.id
+}
+
+/**
+ * Resolve one provider's credential reference and optional base URL from its
+ * configurable-provider settings profile.
+ */
+function providerConnection(ctx: Context, provider: string): { apiKeyEnv?: string; baseURL?: string } {
+  const services = ctx.get as (key: string) => unknown
+  const entry = (services('llm') as BalanceHostServices['llm'])
+    ?.listConfigurableProviders?.()
+    .find((candidate) => candidate.provider === provider)
+  if (entry === undefined) return {}
+  const view = (services('settings') as BalanceHostServices['settings'])
+    ?.describe?.({ redactSecrets: true })
+    .find((candidate) => String(candidate.ns) === entry.settingsNs)
+  if (view === undefined) return {}
+  const profile = entry.settingsPath.reduce(
+    (node, key) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[key] : undefined),
+    view.value,
+  )
+  if (typeof profile !== 'object' || profile === null) return {}
+  const record = profile as Record<string, unknown>
+  return {
+    ...typeof record.apiKeyEnv === 'string' ? { apiKeyEnv: record.apiKeyEnv } : {},
+    ...typeof record.baseURL === 'string' ? { baseURL: record.baseURL } : {},
+  }
+}
+
+/**
+ * The /balance route: resolves the current provider's credential (the key
+ * never leaves the host process) and queries its balance API. Same loopback
+ * fence as the rest of the route family.
+ */
+export function makeBalanceRoute(ctx: Context): WebRoute {
+  const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    if (!guard(req, res, 'GET')) return
+    const send = (status: number, body: BalanceInfo & { error?: string }): void => {
+      writeJson(res, status, { ok: status < 400, ...body })
+    }
+    try {
+      const provider = currentProvider(ctx)
+      if (provider === undefined) {
+        send(200, { provider: '', supported: false, error: 'no provider configured' })
+        return
+      }
+      const { apiKeyEnv, baseURL } = providerConnection(ctx, provider)
+      const ref = credentialRef(apiKeyEnv ?? 'DEEPSEEK_API_KEY')
+      const credentials = (ctx.get('credentials') as BalanceHostServices['credentials'])
+      const hit = credentials === undefined ? undefined : await credentials.resolve(ref)
+      if (hit === undefined) {
+        send(200, { provider, supported: false, error: `no credential configured for ${ref}` })
+        return
+      }
+      const build = BALANCE_ENDPOINTS[provider]
+      if (build === undefined) {
+        send(200, { provider, supported: false, error: `balance is not supported for provider "${provider}"` })
+        return
+      }
+      const response = await fetch(build(baseURL), {
+        headers: { authorization: `Bearer ${hit.value}` },
+        signal: AbortSignal.timeout(15_000),
+      })
+      if (!response.ok) {
+        send(200, { provider, supported: false, error: `balance query failed: HTTP ${response.status}` })
+        return
+      }
+      const body = (await response.json()) as { is_available?: boolean; balance_infos?: Array<{ currency?: string; total_balance?: string; granted_balance?: string; topped_up_balance?: string }> }
+      const info = Array.isArray(body.balance_infos) ? body.balance_infos[0] : undefined
+      send(200, {
+        provider,
+        supported: true,
+        available: body.is_available === true,
+        ...(info === undefined ? {} : {
+          currency: info.currency,
+          totalBalance: info.total_balance,
+          grantedBalance: info.granted_balance,
+          toppedUpBalance: info.topped_up_balance,
+        }),
+      })
+    } catch (error) {
+      send(500, {
+        provider: '',
+        supported: false,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+  return {
+    kind: 'exact',
+    path: `${TOKEN_COST_API}/balance`,
+    handler: handle,
+  }
+}
+
 /** Build the route list. */
 export function makeRoutes(deps: TokenCostRoutesDeps): WebRoute[] {
   const { ledger } = deps
-
-  /** Fence + method check, writing the error response on failure. */
-  const guard = (req: IncomingMessage, res: ServerResponse, method: string): boolean => {
-    if (!isLoopbackRequest(req)) {
-      writeJson(res, 403, { error: 'forbidden: loopback-only' })
-      return false
-    }
-    if (req.method !== method) {
-      writeJson(res, 405, { error: `method not allowed: ${req.method}` })
-      return false
-    }
-    return true
-  }
 
   return [
     {

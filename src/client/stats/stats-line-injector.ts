@@ -15,6 +15,9 @@ import { formatMoney } from '../format.ts'
 /** Marker identifying injected nodes (removed before re-inject). */
 export const COST_NODE_MARKER = 'data-dsh-token-cost-price'
 
+/** Marker identifying injected balance nodes. */
+export const BALANCE_NODE_MARKER = 'data-dsh-token-cost-balance'
+
 /** The current cost text the bridge computed (empty while unknown). */
 export interface CostBridgeState {
   /** Formatted cost for the active currency, e.g. '¥0.12'; empty when unknown. */
@@ -25,6 +28,11 @@ export interface CostBridgeState {
   sessionId?: string
   /** Display currency (for the click-through detail modal). */
   currency?: 'cny' | 'usd'
+  /**
+   * Formatted balance value, e.g. '¥5.79' (or a status word like '查询中…').
+   * Empty/absent hides the balance group entirely.
+   */
+  balanceText?: string
 }
 
 let current: CostBridgeState = { costText: '', disabled: false }
@@ -32,9 +40,17 @@ let current: CostBridgeState = { costText: '', disabled: false }
 /** Click handler the bridge registers to open the session detail modal. */
 let openDetail: ((sessionId: string) => void) | null = null
 
+/** Click handler the bridge registers to refresh the account balance. */
+let refreshBalance: (() => void) | null = null
+
 /** Register the modal opener (the bridge component owns the modal). */
 export function registerDetailOpener(opener: (sessionId: string) => void): void {
   openDetail = opener
+}
+
+/** Register the balance refresher (the bridge component owns the query). */
+export function registerBalanceRefresher(refresher: (() => void) | null): void {
+  refreshBalance = refresher
 }
 
 /** Publish a new bridge state (called by the dock bridge component). */
@@ -110,8 +126,8 @@ function findCacheAnchor(container: HTMLElement): { root: HTMLElement; anchor: H
 
 /**
  * Apply the injection (idempotent): remove stale nodes, then place the cost
- * group right before the cache-hit span, cloning the official separator so
- * spacing matches the line exactly.
+ * group (and, when present, the balance group) right before the cache-hit
+ * span, cloning the official separator so spacing matches the line exactly.
  */
 function applyInjection(
   root: HTMLElement,
@@ -121,6 +137,7 @@ function applyInjection(
   state: CostBridgeState,
 ): void {
   root.querySelectorAll(`[${COST_NODE_MARKER}]`).forEach((el) => el.remove())
+  root.querySelectorAll(`[${BALANCE_NODE_MARKER}]`).forEach((el) => el.remove())
   const sep = anchor.previousElementSibling
   const label = chinese ? '费用' : 'Cost'
   const group = document.createElement('span')
@@ -142,10 +159,35 @@ function applyInjection(
     // cost group; give the cache-hit group a cloned separator of its own.
     const sepClone = sep.cloneNode(true) as HTMLElement
     sepClone.setAttribute(COST_NODE_MARKER, 'sep')
-    anchor.before(' ', group, ' ', sepClone)
+    // Balance group rides right after the cost group (same separator rhythm).
+    const nodes: Array<Node | string> = [' ', group]
+    if (state.balanceText !== undefined && state.balanceText !== '') {
+      const balanceSep = sep.cloneNode(true) as HTMLElement
+      balanceSep.setAttribute(BALANCE_NODE_MARKER, 'sep')
+      nodes.push(' ', balanceSep, ' ', makeBalanceGroup(chinese, state.balanceText))
+    }
+    nodes.push(' ', sepClone)
+    anchor.before(...nodes)
   } else {
     anchor.before(group)
   }
+}
+
+/** Build the balance span: shows the current balance, click to refresh. */
+function makeBalanceGroup(chinese: boolean, text: string): HTMLElement {
+  const label = chinese ? '余额' : 'Balance'
+  const group = document.createElement('span')
+  group.setAttribute(BALANCE_NODE_MARKER, 'group')
+  group.textContent = `${label} ${text}`
+  group.style.cursor = 'pointer'
+  group.style.textDecoration = 'underline dotted'
+  group.title = chinese ? '点击刷新余额' : 'Click to refresh balance'
+  group.addEventListener('click', (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    refreshBalance?.()
+  })
+  return group
 }
 
 let scheduled = 0
@@ -165,14 +207,56 @@ function applyNow(): void {
   if (state.disabled || state.costText === '') {
     // Stale nodes must not linger when the data went away.
     document.querySelectorAll(`[${COST_NODE_MARKER}]`).forEach((el) => el.remove())
+    document.querySelectorAll(`[${BALANCE_NODE_MARKER}]`).forEach((el) => el.remove())
     return
   }
   const located = locateLine()
   if (located === null) return
   const { root, anchor } = located
+  const chinese = lineIsChinese(root.textContent ?? '')
   const existing = anchor.previousElementSibling
-  if (existing !== null && existing.hasAttribute(COST_NODE_MARKER)) return
-  applyInjection(root, anchor, state.costText, lineIsChinese(root.textContent ?? ''), state)
+  if (existing !== null && existing.hasAttribute(COST_NODE_MARKER)) {
+    // Already injected: the idempotent guard must not swallow later updates
+    // (the balance data lands after the initial injection). Update in place.
+    updateInjection(root, state, chinese)
+    return
+  }
+  applyInjection(root, anchor, state.costText, chinese, state)
+}
+
+/**
+ * Refresh an already-injected stats line in place: cost text, and the
+ * balance group (update, insert when it just became visible, or remove when
+ * it went away). Never rebuilds the whole line, so the injected nodes keep
+ * their identity across the shell's re-renders.
+ */
+function updateInjection(root: HTMLElement, state: CostBridgeState, chinese: boolean): void {
+  const label = chinese ? '费用' : 'Cost'
+  const costGroup = root.querySelector(`[${COST_NODE_MARKER}="group"]`)
+  if (costGroup !== null) costGroup.textContent = `${label} ${state.costText}`
+
+  const wantBalance = state.balanceText !== undefined && state.balanceText !== ''
+  const balanceGroup = root.querySelector(`[${BALANCE_NODE_MARKER}="group"]`)
+  if (wantBalance && balanceGroup !== null) {
+    balanceGroup.textContent = `${chinese ? '余额' : 'Balance'} ${state.balanceText}`
+    return
+  }
+  if (!wantBalance && balanceGroup !== null) {
+    const sep = balanceGroup.previousElementSibling
+    if (sep !== null && sep.hasAttribute(BALANCE_NODE_MARKER)) sep.remove()
+    balanceGroup.remove()
+    return
+  }
+  if (wantBalance && balanceGroup === null) {
+    const balanceText = state.balanceText
+    if (balanceText === undefined || balanceText === '') return
+    const sepClone = root.querySelector(`[${COST_NODE_MARKER}="sep"]`)
+    if (sepClone === null) return
+    const balanceSep = sepClone.cloneNode(true) as HTMLElement
+    balanceSep.removeAttribute(COST_NODE_MARKER)
+    balanceSep.setAttribute(BALANCE_NODE_MARKER, 'sep')
+    sepClone.before(' ', balanceSep, ' ', makeBalanceGroup(chinese, balanceText))
+  }
 }
 
 let observer: MutationObserver | null = null
@@ -193,6 +277,7 @@ export function stopStatsLineInjector(): void {
     observer = null
   }
   document.querySelectorAll(`[${COST_NODE_MARKER}]`).forEach((el) => el.remove())
+  document.querySelectorAll(`[${BALANCE_NODE_MARKER}]`).forEach((el) => el.remove())
 }
 
 /** Format a totals pair into the display cost text. */
