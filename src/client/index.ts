@@ -26,6 +26,29 @@ import { TOKEN_COST_NS, type TokenCostSettings } from './settings-schema.ts'
 /** Locale namespace this plugin owns. */
 const NS = 'token-cost'
 
+/** Style tag id for the chat-width override (kept idempotent). */
+const CHAT_WIDTH_STYLE_ID = 'dsh-token-cost-chat-width'
+
+/**
+ * Force the conversation column to full width. The shell defines
+ * `--dsh-chat-content-width` on its conversation root; a universal
+ * `!important` declaration overrides that variable wherever it is set, so
+ * every consumer (message column, empty-state card, composer card) resolves
+ * to 100% and the DSH upgrade cannot silently revert the width.
+ */
+function applyChatWidthCss(width: 'wide' | 'default'): void {
+  const existing = document.getElementById(CHAT_WIDTH_STYLE_ID)
+  if (width !== 'wide') {
+    existing?.remove()
+    return
+  }
+  if (existing !== null) return
+  const style = document.createElement('style')
+  style.id = CHAT_WIDTH_STYLE_ID
+  style.textContent = '*{--dsh-chat-content-width:100%!important}'
+  document.head.appendChild(style)
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** dsh-token-cost surface copy. */
@@ -62,6 +85,20 @@ export function apply(ctx: ClientContext): void {
 
   const scope = ctx.settingsScope.bind<TokenCostSettings>({ namespace: TOKEN_COST_NS })
 
+  // Chat width follows the settings section live: react to edits, and clean
+  // the injected style on teardown.
+  let unsubscribeWidth: (() => void) | undefined
+  try {
+    const applyWidth = (): void => {
+      const value = scope.getSnapshot().value
+      applyChatWidthCss(value?.chatWidth ?? 'wide')
+    }
+    unsubscribeWidth = scope.subscribe(applyWidth)
+    applyWidth()
+  } catch (error) {
+    console.warn('[dsh-token-cost] chat-width mount failed:', error)
+  }
+
   const disposers: Array<() => void> = []
   try {
     disposers.push(ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
@@ -83,5 +120,6 @@ export function apply(ctx: ClientContext): void {
   }
   ctx.effect(() => () => {
     for (const dispose of disposers.splice(0)) dispose()
+    unsubscribeWidth?.()
   }, 'token-cost: ui mounts')
 }

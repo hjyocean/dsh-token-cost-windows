@@ -182,3 +182,25 @@ export interface ResyncResponse {
   ledger: LedgerStatus
   error?: string
 }
+
+/**
+ * Provider-reported account balance facts (DeepSeek `/user/balance` shape).
+ * Every field optional: providers that do not support balance queries answer
+ * with `supported: false` instead of failing the surface.
+ */
+export interface BalanceInfo {
+  provider: string
+  supported: boolean
+  /** True while the account accepts new requests. */
+  available?: boolean
+  currency?: string
+  totalBalance?: string
+  grantedBalance?: string
+  toppedUpBalance?: string
+}
+
+/** GET /api/dsh-token-cost/balance */
+export interface BalanceResponse extends BalanceInfo {
+  ok: boolean
+  error?: string
+}

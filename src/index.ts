@@ -16,7 +16,7 @@ import z from 'schemastery'
 import { SessionLedger } from './ledger.ts'
 import { PRICE_SCHEMES, parseCustomPrices, withCustomPrices } from './pricing.ts'
 import type { ModelPrice, PriceScheme } from './protocol.ts'
-import { makeRoutes } from './routes.ts'
+import { makeBalanceRoute, makeRoutes } from './routes.ts'
 
 /** Stable cordis plugin name. */
 export const name = 'token-cost'
@@ -41,6 +41,8 @@ export interface Config {
   priceMode?: 'auto' | 'scheme-a' | 'scheme-b'
   /** Custom model prices as JSON text; empty string = none. */
   customPrices?: string
+  /** Conversation column width: 'wide' forces full width, 'default' keeps the shell's. */
+  chatWidth?: 'wide' | 'default'
 }
 
 export const Config: z<Config> = z.object({
@@ -48,6 +50,7 @@ export const Config: z<Config> = z.object({
   currency: z.union([z.const('cny'), z.const('usd')]).default('cny'),
   priceMode: z.union([z.const('auto'), z.const('scheme-a'), z.const('scheme-b')]).default('auto'),
   customPrices: z.string().default(''),
+  chatWidth: z.union([z.const('wide'), z.const('default')]).default('wide'),
 })
 
 /** Resolve the harness home: $DSH_HOME, else ~/.dsh. */
@@ -73,6 +76,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       currency: value.currency ?? 'cny',
       priceMode: value.priceMode ?? 'auto',
       customPrices: value.customPrices ?? '',
+      chatWidth: value.chatWidth ?? 'wide',
     }
   }
 
@@ -107,7 +111,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     }
     disposeRoutes = ctx.effect(
       () => {
-        const routes = makeRoutes({ ledger, pricing, schemes })
+        const routes = [...makeRoutes({ ledger, pricing, schemes }), makeBalanceRoute(ctx)]
         const disposers = routes.map((route) => ctx.webServer.register(route))
         return () => { for (const dispose of disposers) dispose() }
       },

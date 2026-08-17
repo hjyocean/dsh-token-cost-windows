@@ -381,6 +381,7 @@ function ConfigTab(props: TabProps & { scope: SettingsScope<TokenCostSettings> }
   const [currencyDraft, setCurrencyDraft] = useState(value.currency ?? 'cny')
   const [priceMode, setPriceMode] = useState(value.priceMode ?? 'auto')
   const [customPrices, setCustomPrices] = useState(value.customPrices ?? '')
+  const [chatWidth, setChatWidth] = useState(value.chatWidth ?? 'wide')
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -418,6 +419,7 @@ function ConfigTab(props: TabProps & { scope: SettingsScope<TokenCostSettings> }
       if (currencyDraft !== (value.currency ?? 'cny')) await scope.set('currency', currencyDraft)
       if (priceMode !== (value.priceMode ?? 'auto')) await scope.set('priceMode', priceMode)
       if (customPrices !== (value.customPrices ?? '')) await scope.set('customPrices', customPrices.trim())
+      if (chatWidth !== (value.chatWidth ?? 'wide')) await scope.set('chatWidth', chatWidth)
       setDirty(false)
       setSaved(true)
     } catch {
@@ -430,6 +432,7 @@ function ConfigTab(props: TabProps & { scope: SettingsScope<TokenCostSettings> }
     setCurrencyDraft(value.currency ?? 'cny')
     setPriceMode(value.priceMode ?? 'auto')
     setCustomPrices(value.customPrices ?? '')
+    setChatWidth(value.chatWidth ?? 'wide')
     setDirty(false)
     setJsonInvalid(false)
     setFailed(false)
@@ -509,6 +512,19 @@ function ConfigTab(props: TabProps & { scope: SettingsScope<TokenCostSettings> }
             <option value="scheme-b">{t('config.priceModeB')}</option>
           </select>
           <span className={css.fieldHint}>{t('config.priceModeHint')}</span>
+        </div>
+        <div className={css.field}>
+          <label className={css.fieldLabel} htmlFor="token-cost-chat-width">{t('config.chatWidth')}</label>
+          <select
+            id="token-cost-chat-width"
+            className={css.select}
+            value={chatWidth}
+            onChange={(event) => { setChatWidth(event.target.value as 'wide' | 'default'); setDirty(true) }}
+          >
+            <option value="wide">{t('config.chatWidthWide')}</option>
+            <option value="default">{t('config.chatWidthDefault')}</option>
+          </select>
+          <span className={css.fieldHint}>{t('config.chatWidthHint')}</span>
         </div>
         <div className={css.field}>
           <label className={css.fieldLabel} htmlFor="token-cost-custom-prices">{t('config.customPrices')}</label>

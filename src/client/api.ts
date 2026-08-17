@@ -6,6 +6,7 @@
 
 import { TOKEN_COST_API } from '../protocol.ts'
 import type {
+  BalanceResponse,
   ResyncResponse,
   SessionDetailResponse,
   SessionsResponse,
@@ -64,5 +65,10 @@ export class TokenCostApi {
   async resync(): Promise<ResyncResponse> {
     const response = await fetch(`${TOKEN_COST_API}/resync`, { method: 'POST' })
     return readJson<ResyncResponse>(response)
+  }
+
+  async balance(): Promise<BalanceResponse> {
+    const response = await fetch(`${TOKEN_COST_API}/balance`, { headers: { accept: 'application/json' } })
+    return readJson<BalanceResponse>(response)
   }
 }

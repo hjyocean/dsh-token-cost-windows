@@ -2,10 +2,9 @@
  * Ledger tests: incremental sync over real zstd session-log files.
  */
 
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { copyFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SessionLedger } from '../src/ledger.ts'
 
@@ -33,8 +32,12 @@ describe('SessionLedger', () => {
     await ledger.sync()
     expect(ledger.stats().recordCount).toBe(1)
 
-    // Changed file: re-parse picks the new usage up.
+    // Changed file: re-parse picks the new usage up. The fixture copy lands
+    // within the same filesystem timestamp tick on Windows (mtimeMs equal),
+    // so bump the mtime to simulate a genuinely changed file.
     copyFileSync(FIXTURE_B, file)
+    const later = new Date(Date.now() + 1_000)
+    utimesSync(file, later, later)
     await ledger.sync()
     expect(ledger.session('session-abc')!.records[0]!.inputTokens).toBe(200)
   })
