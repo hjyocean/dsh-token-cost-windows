@@ -79,7 +79,7 @@ This repository is forked from [le-soleil-se-couche/dsh-token-cost](https://gith
 - **Account balance**: new `/api/dsh-token-cost/balance` route plus a balance chip in the conversation stats line (5-minute auto refresh, click to refresh). The key is resolved through the `credentials` service inside the host process and never leaves it.
 - **Conversation width**: new `chatWidth` setting that overrides DSH's built-in width variable (survives DSH upgrades).
 - **Windows path compatibility**: `ledger.ts` used `split('/')` / `lastIndexOf('/')`, which only understand forward slashes; now both `\` and `/` work — fixing all session ids collapsing to `session-unknown` and the ledger.json persist failure (`mkdir ''`) on Windows.
-- **DSH rc.6 slot rename**: the settings card slot changed from `web-ui.plugin.item` to `settings.plugins.tab` (the upstream name registers silently without effect on rc.6; the Plugins configuration section is driven by the `settings.plugins.tab` tab slot, so the card now shows as a "Token Cost" tab inside Settings > Plugins).
+- **DSH rc.6 slot rename**: the settings card slot changed from `web-ui.plugin.item` to `settings.plugin.item` (the upstream name does not exist on rc.6; the Plugins configuration area is three-tier: `settings.section` (nav entry) > `settings.plugins.tab` (tabs: plugin list / configurable) > `settings.plugin.item` (cards inside the configurable tab). The card registers into `settings.plugin.item` and shows under Settings > Plugins > Configurable).
 - **Tests**: ledger test adapted to Windows filesystem timestamp precision (CopyFile preserves the source mtime, which defeated the `(mtimeMs, size)` change detection).
 
 ## Configuration

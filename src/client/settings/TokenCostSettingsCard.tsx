@@ -1,8 +1,9 @@
 /**
- * The dsh-token-cost settings card: the summary dashboard (time-filtered
- * totals, grouped tables), the per-session browser, and the pricing/alias
- * configuration. Registers into the `settings.plugins.tab` slot so it shows
- * as one tab inside the Plugins configuration section of the settings panel.
+ * The dsh-token-cost settings page: a standalone nav section (like the usage
+ * plugin) holding the summary dashboard (time-filtered totals, grouped
+ * tables), the per-session browser, and the pricing/alias configuration.
+ * Registers into the `settings.section` slot, so it shows as its own entry in
+ * the settings sidebar instead of a card mixed with other plugins.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -28,9 +29,9 @@ export interface TokenCostSettingsCardFace {
   settings: SettingsScope<TokenCostSettings>
 }
 
-/** Full props the renderer binds for the settings.plugins.tab card. */
+/** Full props the renderer binds for the settings.section page. */
 export type TokenCostSettingsCardProps =
-  PropsRuntime<'settings.plugins.tab'>
+  PropsRuntime<'settings.section'>
   & PropsLocale<'token-cost'>
   & InjectFace<TokenCostSettingsCardFace>
 
@@ -51,7 +52,7 @@ export function TokenCostSettingsCard(props: TokenCostSettingsCardProps) {
   const api = useMemo(() => new TokenCostApi(), [])
 
   return (
-    <li className={css.card}>
+    <div className={css.card}>
       <div className={css.head}>
         <span className={css.title}>{t('card.title')}</span>
         <span className={css.desc}>{t('card.description')}</span>
@@ -82,7 +83,7 @@ export function TokenCostSettingsCard(props: TokenCostSettingsCardProps) {
           <ConfigTab t={t} scope={props.settings} api={api} currency={resolved.currency} />
         )}
       </div>
-    </li>
+    </div>
   )
 }
 

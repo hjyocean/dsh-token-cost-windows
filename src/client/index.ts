@@ -55,7 +55,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'token-cost': TokenCostKey
   }
 }
-
 /** Required services (fiber inject waiting — the runtime must be up first). */
 export const inject = ['slots', 'locale', 'connection', 'settingsScope', 'remote']
 
@@ -92,10 +91,11 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: (): StatsCostBridgeFace => ({ settings: scope }),
     }, StatsCostBridge)))
-    disposers.push(ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
-      name: 'settings.plugins.tab',
+    disposers.push(ctx.slots.inject('settings.section', () => ctx.slots.register({
+      name: 'settings.section',
       id: 'token-cost',
-      order: 130,
+      order: 40,
+      label: 'Token 费用统计',
       locale: NS,
       inject: (): TokenCostSettingsCardFace => ({ settings: scope }),
     }, TokenCostSettingsCard)))

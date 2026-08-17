@@ -80,7 +80,7 @@ pnpm build        # 重新生成 lib/
 - **账户余额**：新增 `/api/dsh-token-cost/balance` 路由与状态行余额 chip（5 分钟自动刷新、点击手动刷新），密钥经 `credentials` 服务在 host 进程内解析，不出进程
 - **对话区全宽**：新增 `chatWidth` 配置项，覆盖 DSH 内置宽度变量（升级不回退）
 - **Windows 路径兼容**：`ledger.ts` 中 `split('/')` 与 `lastIndexOf('/')` 只认正斜杠，已改为兼容 `\`——修复 Windows 下会话 id 全部变成 `session-unknown`、ledger.json 持久化失败（`mkdir ''`）两个问题
-- **DSH rc.6 槽名适配**：设置页卡片槽 `web-ui.plugin.item` → `settings.plugins.tab`（上游槽名在 rc.6 下注册静默失效；rc.6 的插件配置区由 `settings.plugins.tab` 标签槽驱动，卡片作为「Token 费用统计」标签显示在 设置 > 插件配置 内）
+- **DSH rc.6 槽名适配**：设置页卡片槽 `web-ui.plugin.item` → `settings.plugin.item`（上游槽名在 rc.6 不存在；rc.6 的「插件配置」区由 `settings.section`（导航）+ `settings.plugins.tab`（标签：插件列表 / 可配置）+ `settings.plugin.item`（可配置标签内的插件卡片）三级组成，卡片注册在 `settings.plugin.item`，显示于 设置 > 插件配置 > 可配置）
 - **测试**：ledger 测试适配 Windows 文件时间戳精度（CopyFile 保留源 mtime，`(mtimeMs, size)` 变更检测失效）
 
 ## 配置项
